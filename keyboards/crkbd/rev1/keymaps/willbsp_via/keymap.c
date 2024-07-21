@@ -16,8 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdint.h>
 #include QMK_KEYBOARD_H
 
+// clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT_split_3x6_3(
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
@@ -134,10 +136,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                       //`--------------------------'  `--------------------------'
   )
 };
+// clang-format on
 
-
-
-
+#ifdef RGB_MATRIX_ENABLE
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (host_keyboard_led_state().caps_lock) {
         for (uint8_t i = led_min; i < led_max; i++) {
@@ -146,35 +147,11 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             }
         }
     }
-
-    /*if (get_highest_layer(layer_state) > 0) {
-        uint8_t layer = get_highest_layer(layer_state);
-
-        for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
-            for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
-                uint8_t index = g_led_config.matrix_co[row][col];
-
-                if (index >= led_min && index < led_max && index != NO_LED &&
-                keymap_key_to_keycode(layer, (keypos_t){col,row}) > KC_NO) {
-                    rgb_matrix_set_color(index, RGB_GREEN);
-                }
-            }
-        }
-    }*/
-
     return false;
 }
-
-
+#endif // RGB_MATRIX_ENABLE
 
 #ifdef OLED_ENABLE
-
-oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-    if (!is_keyboard_master()) {
-        return OLED_ROTATION_180; // flips the display 180 degrees if offhand
-    }
-    return rotation;
-}
 
 static void oled_render_layer_state(void) {
     oled_write_P(PSTR("Layer: "), false);
@@ -183,7 +160,7 @@ static void oled_render_layer_state(void) {
             oled_write_ln_P(PSTR("Base"), false);
             break;
         case 1:
-            oled_write_ln_P(PSTR("Nav"), false);
+            oled_write_ln_P(PSTR("Navigation"), false);
             break;
         case 2:
             oled_write_ln_P(PSTR("Mouse"), false);
@@ -192,13 +169,13 @@ static void oled_render_layer_state(void) {
             oled_write_ln_P(PSTR("Media"), false);
             break;
         case 4:
-            oled_write_ln_P(PSTR("Num"), false);
+            oled_write_ln_P(PSTR("Number"), false);
             break;
         case 5:
-            oled_write_ln_P(PSTR("Sym"), false);
+            oled_write_ln_P(PSTR("Symbol"), false);
             break;
         case 6:
-            oled_write_ln_P(PSTR("Fun"), false);
+            oled_write_ln_P(PSTR("Function"), false);
             break;
         case 7:
             oled_write_ln_P(PSTR("Game"), false);
@@ -209,72 +186,61 @@ static void oled_render_layer_state(void) {
     }
 }
 
-char     pressed_key_name = ' ';
-uint16_t last_keycode;
-uint8_t  last_row;
-uint8_t  last_col;
+os_variant_t os_detection = OS_UNSURE;
+uint8_t      last_row;
+uint8_t      last_col;
 
-static const char PROGMEM code_to_name[60] = {' ', ' ', ' ', ' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'R', 'E', 'B', 'T', '_', '-', '=', '[', ']', '\\', '#', ';', '\'', '`', ',', '.', '/', ' ', ' ', ' '};
+#    ifdef OS_DETECTION_ENABLE
+bool process_detected_host_os_user(os_variant_t detected_os) {
+    os_detection = detected_os;
+    return true;
+}
+#    endif // OS_DETECTION_ENABLE
 
-static void set_keylog(uint16_t keycode, keyrecord_t *record) {
-    // save the row and column (useful even if we can't find a keycode to show)
-    last_row = record->event.key.row;
-    last_col = record->event.key.col;
+#    ifdef WPM_ENABLE
 
-    pressed_key_name     = ' ';
-    last_keycode = keycode;
-    if (IS_QK_MOD_TAP(keycode)) {
-        if (record->tap.count) {
-            keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
-        } else {
-            keycode = 0xE0 + biton(QK_MOD_TAP_GET_MODS(keycode) & 0xF) + biton(QK_MOD_TAP_GET_MODS(keycode) & 0x10);
-        }
-    } else if (IS_QK_LAYER_TAP(keycode) && record->tap.count) {
-        keycode = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);
-    } else if (IS_QK_MODS(keycode)) {
-        keycode = QK_MODS_GET_BASIC_KEYCODE(keycode);
-    } else if (IS_QK_ONE_SHOT_MOD(keycode)) {
-        keycode = 0xE0 + biton(QK_ONE_SHOT_MOD_GET_MODS(keycode) & 0xF) + biton(QK_ONE_SHOT_MOD_GET_MODS(keycode) & 0x10);
+static void oled_render_wpm(void) {
+    uint8_t wpm = get_current_wpm();
+    oled_write_P(PSTR("WPM: "), false);
+    char buf[sizeof(wpm) * 4 + 1];
+    sprintf(buf, "%d", wpm);
+    oled_write_ln(PSTR(buf), false);
+}
+static void oled_render_detected_os(os_variant_t detected_os) {
+    oled_write_P(PSTR("Detected OS: "), false);
+    switch (detected_os) {
+        case OS_MACOS:
+            oled_write_ln(PSTR("MacOS"), false);
+            break;
+        case OS_LINUX:
+            oled_write_ln(PSTR("Linux"), false);
+            break;
+        case OS_WINDOWS:
+            oled_write_ln(PSTR("Windows"), false);
+            break;
+        case OS_IOS:
+            oled_write_ln(PSTR("iOS"), false);
+            break;
+        case OS_UNSURE:
+            oled_write_ln(PSTR("Unknown"), false);
+            break;
     }
-    if (keycode > ARRAY_SIZE(code_to_name)) {
-        return;
-    }
-
-    // update keylog
-    pressed_key_name = pgm_read_byte(&code_to_name[keycode]);
 }
 
-static const char *depad_str(const char *depad_str, char depad_char) {
-    while (*depad_str == depad_char)
-        ++depad_str;
-    return depad_str;
+#    endif // WPM_ENABLE
+
+static void set_keylog(uint16_t keycode, keyrecord_t *record) {
+    last_row = record->event.key.row;
+    last_col = record->event.key.col;
 }
 
 static void oled_render_keylog(void) {
+    oled_write_P("Key: ", false);
     oled_write_char('0' + last_row, false);
     oled_write_P(PSTR("x"), false);
     oled_write_char('0' + last_col, false);
-    oled_write_P(PSTR(", k"), false);
-    const char *last_keycode_str = get_u16_str(last_keycode, ' ');
-    oled_write(depad_str(last_keycode_str, ' '), false);
-    oled_write_P(PSTR(":"), false);
-    oled_write_char(pressed_key_name, false);
+    oled_write_ln_P(PSTR(""), false);
 }
-
-// static void render_bootmagic_status(bool status) {
-//     /* Show Ctrl-Gui Swap options */
-//     static const char PROGMEM logo[][2][3] = {
-//         {{0x97, 0x98, 0}, {0xb7, 0xb8, 0}},
-//         {{0x95, 0x96, 0}, {0xb5, 0xb6, 0}},
-//     };
-//     if (status) {
-//         oled_write_ln_P(logo[0][0], false);
-//         oled_write_ln_P(logo[0][1], false);
-//     } else {
-//         oled_write_ln_P(logo[1][0], false);
-//         oled_write_ln_P(logo[1][1], false);
-//     }
-// }
 
 __attribute__((weak)) void oled_render_logo(void) {
     // clang-format off
@@ -287,13 +253,23 @@ __attribute__((weak)) void oled_render_logo(void) {
     oled_write_P(crkbd_logo, false);
 }
 
+oled_rotation_t oled_init_user(oled_rotation_t rotation) {
+    if (!is_keyboard_master()) {
+        return OLED_ROTATION_180; // flips the display 180 degrees if offhand
+    }
+    return rotation;
+}
+
 bool oled_task_user(void) {
-    //if (!oled_task_user()) {
-        //return false;
-    //}
     if (is_keyboard_master()) {
         oled_render_layer_state();
         oled_render_keylog();
+#    ifdef WPM_ENABLE
+        oled_render_wpm();
+#    endif
+#    ifdef OS_DETECTION_ENABLE
+        oled_render_detected_os(os_detection);
+#    endif
     } else {
         oled_render_logo();
     }
@@ -304,7 +280,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
         set_keylog(keycode, record);
     }
-    //return process_record_user(keycode, record);
     return true;
 }
 #endif // OLED_ENABLE
