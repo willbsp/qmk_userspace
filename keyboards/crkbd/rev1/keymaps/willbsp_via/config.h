@@ -85,9 +85,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_MATRIX_DEFAULT_SAT 100
 
 #define OLED_FONT_H "keyboards/crkbd/rev1/keymaps/willbsp_via/lib/glcdfont.c"
+#define OLED_TIMEOUT 120000
 
 #define DYNAMIC_KEYMAP_LAYER_COUNT 10
-#define TAPPING_TERM 150
+#define TAPPING_TERM 125
 
 #define SPLIT_LAYER_STATE_ENABLE
 #define SPLIT_LED_STATE_ENABLE
