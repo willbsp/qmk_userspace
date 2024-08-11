@@ -124,7 +124,7 @@ bool leader_add_user() {
     } else if (leader_sequence_two_keys(KC_G, KC_A)) {
         SEND_STRING("git add ");
         return true;
-    } else if (leader_sequence_two_keys(KC_G, KC_C)) {
+    } else if (leader_sequence_two_keys(KC_G, KC_O)) {
         SEND_STRING("git clone ");
         return true;
     }
@@ -150,19 +150,19 @@ static void oled_render_which_key(void) {
     switch (macro_page) {
         case BASE:
             oled_write_ln_P(PSTR("    --- Leader ---"), false);
-            oled_write_ln_P(PSTR("(G)it (N)ix (S)earch"), false);
+            oled_write_P(PSTR("(G)it (N)ix (S)earch"), false);
             break;
         case GIT:
-            oled_write_ln_P(PSTR("(C)ommit (C)lone"), false);
+            oled_write_ln_P(PSTR("(C)ommit Cl(o)ne"), false);
             oled_write_ln_P(PSTR("Pull(J) Push(K)"), false);
             oled_write_ln_P(PSTR("(A)dd (D)iff"), false);
             oled_write_ln_P(PSTR("(L)og (S)tatus"), false);
             break;
         case NIX:
-            oled_write_ln_P(PSTR("(S)witch"), false);
+            oled_write_P(PSTR("(S)witch"), false);
             break;
         case SEARCH:
-            oled_write_ln_P(PSTR("(R)eddit"), false);
+            oled_write_P(PSTR("(R)eddit"), false);
             break;
     }
 }
