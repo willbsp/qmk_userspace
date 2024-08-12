@@ -17,9 +17,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdint.h>
+#include "host.h"
+#include "keycode_config.h"
 #include "keycodes.h"
 #include "oled_driver.h"
+#include "os_detection.h"
+#include "process_dynamic_macro.h"
+#include "process_tap_dance.h"
 #include "quantum.h"
+#include "quantum_keycodes.h"
+#include "rgb_matrix.h"
+#include "send_string_keycodes.h"
 #include QMK_KEYBOARD_H
 
 #define LAYER_BASE 0
@@ -31,12 +39,101 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LAYER_FUNCTION 6
 #define LAYER_GAME 7
 
+enum custom_keycodes {
+    // os keycodes, e.g. cmd / ctrl + c
+    OS_SEARCH = SAFE_RANGE,
+};
+
+enum which_key_page {
+    BASE,
+    GIT,
+    NIX,
+    SEARCH,
+    WINDOW,
+};
+
+os_variant_t        os_detection    = OS_UNSURE;
+enum which_key_page macro_page      = BASE;
+uint8_t             macro_recording = 0;
+
+void td_select_all_copy_on_double_tap(tap_dance_state_t *state, void *user_data) {
+    bool use_cmd = os_detection == OS_MACOS || os_detection == OS_IOS;
+    if (state->count == 1) {
+        if (use_cmd) {
+            SEND_STRING(SS_LCMD("c"));
+        } else {
+            SEND_STRING(SS_LCTL("c"));
+        }
+    } else if (state->count == 2) {
+        if (use_cmd) {
+            SEND_STRING(SS_LCMD("ac"));
+        } else {
+            SEND_STRING(SS_LCTL("ac"));
+        }
+    }
+    reset_tap_dance(state);
+}
+
+void td_select_all_paste_on_double_tap(tap_dance_state_t *state, void *user_data) {
+    bool use_cmd = os_detection == OS_MACOS || os_detection == OS_IOS;
+    if (state->count == 1) {
+        if (use_cmd) {
+            SEND_STRING(SS_LCMD("v"));
+        } else {
+            SEND_STRING(SS_LCTL("v"));
+        }
+    } else if (state->count == 2) {
+        if (use_cmd) {
+            SEND_STRING(SS_LCMD("av"));
+        } else {
+            SEND_STRING(SS_LCTL("av"));
+        }
+    }
+    reset_tap_dance(state);
+}
+
+void td_dynamic_macro(tap_dance_state_t *state, void *user_data) {
+    keyrecord_t kr;
+    if (state->count == 1) {
+        kr.event.pressed = false;
+        process_dynamic_macro(QK_DYNAMIC_MACRO_PLAY_1, &kr);
+    } else if (state->count == 2) {
+        kr.event.pressed = true;
+        process_dynamic_macro(QK_DYNAMIC_MACRO_RECORD_STOP, &kr);
+    } else if (state->count == 3) {
+        kr.event.pressed = false;
+        process_dynamic_macro(QK_DYNAMIC_MACRO_RECORD_START_1, &kr);
+    }
+    reset_tap_dance(state);
+}
+
+enum tap_dance_keys {
+    TD_OS_COPY,
+    TD_OS_PASTE,
+    TD_DYN_MACRO,
+};
+
+tap_dance_action_t tap_dance_actions[] = {
+    [TD_OS_COPY]   = ACTION_TAP_DANCE_FN(td_select_all_copy_on_double_tap),
+    [TD_OS_PASTE]  = ACTION_TAP_DANCE_FN(td_select_all_paste_on_double_tap),
+    [TD_DYN_MACRO] = ACTION_TAP_DANCE_FN(td_dynamic_macro),
+};
+
+uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case QK_TAP_DANCE ... QK_TAP_DANCE_MAX:
+            return 500;
+        default:
+            return TAPPING_TERM;
+    }
+}
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[LAYER_BASE] = LAYOUT_split_3x6_3(
-        KC_NO, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TG(7),
-        QK_LEAD, MT(MOD_LALT,KC_A), MT(MOD_LGUI,KC_S), MT(MOD_LCTL,KC_D), MT(MOD_LSFT,KC_F), KC_G, KC_H, MT(MOD_LSFT | MOD_RSFT,KC_J), MT(MOD_LCTL | MOD_RCTL,KC_K), MT(MOD_LGUI,KC_L), MT(MOD_LALT | MOD_RALT,KC_SCLN), KC_NO,
-        KC_NO, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, TG(4),
+        TD(TD_OS_COPY), KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TD(TD_DYN_MACRO),
+        QK_LEAD, MT(MOD_LALT,KC_A), MT(MOD_LGUI,KC_S), MT(MOD_LCTL,KC_D), MT(MOD_LSFT,KC_F), KC_G, KC_H, MT(MOD_LSFT | MOD_RSFT,KC_J), MT(MOD_LCTL | MOD_RCTL,KC_K), MT(MOD_LGUI,KC_L), MT(MOD_LALT | MOD_RALT,KC_SCLN), OS_SEARCH,
+        TD(TD_OS_PASTE), KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, TG(7),
         LT(3,KC_ESC), LT(1,KC_SPC), LT(2,KC_TAB), LT(5,KC_ENT), LT(4,KC_BSPC), LT(6,KC_DEL)
     ),
 	[LAYER_NAVIGATION] = LAYOUT_split_3x6_3(
@@ -60,7 +157,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[LAYER_NUMBER] = LAYOUT_split_3x6_3(
         KC_NO, KC_LBRC, KC_7, KC_8, KC_9, KC_RBRC, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
         KC_NO, KC_QUOT, KC_4, KC_5, KC_6, KC_EQL, KC_NO, KC_RSFT, KC_RCTL, KC_RGUI, KC_RALT, KC_NO,
-        KC_NO, KC_GRV, KC_1, KC_2, KC_3, KC_BSLS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, TG(4),
+        KC_NO, KC_GRV, KC_1, KC_2, KC_3, KC_BSLS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
         KC_DOT, KC_0, KC_MINS, KC_ENT, KC_BSPC, KC_DEL
     ),
 	[LAYER_SYMBOL] = LAYOUT_split_3x6_3(
@@ -82,18 +179,51 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
-enum which_key_page {
-    BASE,
-    GIT,
-    NIX,
-    SEARCH,
+// TODO enable tap dance so 2x user_copy will select all (ctrl/cmd + a) then copy
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case OS_SEARCH:
+            if (record->event.pressed) {
+                switch (os_detection) {
+                    case OS_MACOS:
+                    case OS_IOS:
+                        SEND_STRING(SS_LCMD(" "));
+                        break;
+                    case OS_WINDOWS:
+                        SEND_STRING(SS_LGUI());
+                        break;
+                    case OS_LINUX:
+                        SEND_STRING(SS_LGUI("d"));
+                        break;
+                    default:
+                        SEND_STRING(SS_LGUI());
+                        break;
+                }
+            }
+            break;
+    }
+    return true;
 };
 
-os_variant_t        os_detection = OS_UNSURE;
-enum which_key_page macro_page   = BASE;
+#ifdef DYNAMIC_MACRO_ENABLE
+void dynamic_macro_record_start_user(int8_t direction) {
+    macro_recording = direction;
+}
+void dynamic_macro_record_end_user(int8_t direction) {
+    macro_recording = 0;
+}
+#    ifdef OLED_ENABLE
+static void oled_render_dynamic_macro(void) {
+    if (macro_recording == 1) {
+        oled_write_ln_P(PSTR("Recording 1"), false);
+    } else if (macro_recording == 2) {
+        oled_write_ln_P(PSTR("Recording 2"), false);
+    }
+}
+#    endif // OLED_ENABLE
+#endif     // DYNAMIC_MACRO_ENABLE
 
 #ifdef LEADER_ENABLE
-
 bool leader_add_user() {
     if (leader_sequence_one_key(KC_G)) {
         macro_page = GIT;
@@ -101,6 +231,8 @@ bool leader_add_user() {
         macro_page = NIX;
     } else if (leader_sequence_one_key(KC_S)) {
         macro_page = SEARCH;
+    } else if (leader_sequence_one_key(KC_W)) {
+        macro_page = WINDOW;
     }
     // git macros
     else if (leader_sequence_two_keys(KC_G, KC_C)) {
@@ -132,10 +264,33 @@ bool leader_add_user() {
     else if (leader_sequence_two_keys(KC_N, KC_S)) {
         SEND_STRING("sudo nixos-rebuild switch");
         return true;
+    } else if (leader_sequence_two_keys(KC_N, KC_U)) {
+        SEND_STRING("sudo nix flake update /etc/nixos");
+        return true;
     }
     // search macros
     else if (leader_sequence_two_keys(KC_S, KC_R)) {
         SEND_STRING("site:reddit.com");
+        return true;
+    }
+    // window macros
+    else if (leader_sequence_two_keys(KC_W, KC_Q)) {
+        switch (os_detection) {
+            case OS_LINUX:
+                SEND_STRING(SS_LGUI(SS_LSFT("q")));
+                break;
+            case OS_WINDOWS:
+                SEND_STRING(SS_LALT(SS_TAP(X_F4)));
+                break;
+            case OS_MACOS:
+                SEND_STRING(SS_LCMD("q"));
+                break;
+            case OS_IOS:
+                SEND_STRING(SS_LCMD("m"));
+                break;
+            default:
+                break;
+        }
         return true;
     }
     return false; // leader did not conclude here
@@ -145,12 +300,15 @@ void leader_end_user() {
     macro_page = BASE;
 }
 
+// TODO add braces for dynamic macros
+
 #    ifdef OLED_ENABLE
 static void oled_render_which_key(void) {
     switch (macro_page) {
         case BASE:
             oled_write_ln_P(PSTR("    --- Leader ---"), false);
-            oled_write_P(PSTR("(G)it (N)ix (S)earch"), false);
+            oled_write_ln_P(PSTR("(G)it (N)ix (S)earch"), false);
+            oled_write_ln_P(PSTR("(W)indow"), false);
             break;
         case GIT:
             oled_write_ln_P(PSTR("(C)ommit Cl(o)ne"), false);
@@ -159,10 +317,13 @@ static void oled_render_which_key(void) {
             oled_write_ln_P(PSTR("(L)og (S)tatus"), false);
             break;
         case NIX:
-            oled_write_P(PSTR("(S)witch"), false);
+            oled_write_ln_P(PSTR("(S)witch (U)pdate"), false);
             break;
         case SEARCH:
-            oled_write_P(PSTR("(R)eddit"), false);
+            oled_write_ln_P(PSTR("(R)eddit"), false);
+            break;
+        case WINDOW:
+            oled_write_ln_P(PSTR("(Q)uit"), false);
             break;
     }
 }
@@ -176,7 +337,7 @@ bool process_detected_host_os_user(os_variant_t detected_os) {
 }
 #    ifdef OLED_ENABLE
 static void oled_render_detected_os(os_variant_t detected_os) {
-    oled_write_P(PSTR("Detected OS: "), false);
+    oled_write_P(PSTR("OS: "), false);
     switch (detected_os) {
         case OS_MACOS:
             oled_write_ln(PSTR("MacOS"), false);
@@ -197,18 +358,6 @@ static void oled_render_detected_os(os_variant_t detected_os) {
 }
 #    endif // OLED_ENABLE
 #endif     // OS_DETECTION_ENABLE
-
-#ifdef WPM_ENABLE
-#    ifdef OLED_ENABLE
-static void oled_render_wpm(void) {
-    uint8_t wpm = get_current_wpm();
-    oled_write_P(PSTR("WPM: "), false);
-    char buf[sizeof(wpm) * 4 + 1];
-    sprintf(buf, "%d", wpm);
-    oled_write_ln(PSTR(buf), false);
-}
-#    endif // OLED_ENABLE
-#endif     // WPM_ENABLE
 
 #ifdef OLED_ENABLE
 static void oled_render_layer_state(void) {
@@ -244,6 +393,12 @@ static void oled_render_layer_state(void) {
     }
 }
 
+static void oled_render_caps_state(void) {
+    if (host_keyboard_led_state().caps_lock) {
+        oled_write_ln_P("CAPS LOCK", false);
+    }
+}
+
 __attribute__((weak)) void oled_render_logo(void) {
     // clang-format off
     static const char PROGMEM logo[] = {
@@ -269,18 +424,18 @@ bool oled_task_user(void) {
         if (!leader_sequence_active()) {
 #    endif // LEADER_ENABLE
             oled_render_layer_state();
-#    ifdef WPM_ENABLE
-            oled_render_wpm();
-#    endif
 #    ifdef OS_DETECTION_ENABLE
             oled_render_detected_os(os_detection);
 #    endif
+#    ifdef DYNAMIC_MACRO_ENABLE
+            oled_render_dynamic_macro();
+#    endif
+            oled_render_caps_state();
 #    ifdef LEADER_ENABLE
         } else {
             oled_render_which_key();
         }
 #    endif // LEADER_ENABLE
-
     } else {
         oled_render_logo();
     }
