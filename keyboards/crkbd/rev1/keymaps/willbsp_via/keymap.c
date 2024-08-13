@@ -292,6 +292,8 @@ bool leader_add_user() {
                 break;
         }
         return true;
+    } else { // any other keys, then conclude leader
+        return true;
     }
     return false; // leader did not conclude here
 }
