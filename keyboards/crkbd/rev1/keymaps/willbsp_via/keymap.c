@@ -17,17 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdint.h>
-#include "host.h"
-#include "keycode_config.h"
-#include "keycodes.h"
-#include "oled_driver.h"
-#include "os_detection.h"
-#include "process_dynamic_macro.h"
-#include "process_tap_dance.h"
-#include "quantum.h"
-#include "quantum_keycodes.h"
-#include "rgb_matrix.h"
-#include "send_string_keycodes.h"
 #include QMK_KEYBOARD_H
 
 #define LAYER_BASE 0
@@ -207,11 +196,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 };
 
 #ifdef DYNAMIC_MACRO_ENABLE
-void dynamic_macro_record_start_user(int8_t direction) {
+bool dynamic_macro_record_start_user(int8_t direction) {
     macro_recording = direction;
+    return true;
 }
-void dynamic_macro_record_end_user(int8_t direction) {
+bool dynamic_macro_record_end_user(int8_t direction) {
     macro_recording = 0;
+    return true;
 }
 #    ifdef OLED_ENABLE
 static void oled_render_dynamic_macro(void) {
@@ -225,7 +216,7 @@ static void oled_render_dynamic_macro(void) {
 #endif     // DYNAMIC_MACRO_ENABLE
 
 #ifdef LEADER_ENABLE
-bool leader_add_user() {
+bool leader_add_user(uint16_t keycode) {
     if (leader_sequence_one_key(KC_G)) {
         macro_page = GIT;
     } else if (leader_sequence_one_key(KC_N)) {
