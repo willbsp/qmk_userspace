@@ -50,6 +50,7 @@ enum which_key_page {
     NIX,
     SEARCH,
     WINDOW,
+    BOOKMARK,
 };
 
 os_variant_t        os_detection    = OS_UNSURE;
@@ -233,6 +234,8 @@ bool leader_add_user() {
         macro_page = SEARCH;
     } else if (leader_sequence_one_key(KC_W)) {
         macro_page = WINDOW;
+    } else if (leader_sequence_one_key(KC_B)) {
+        macro_page = BOOKMARK;
     }
     // git macros
     else if (leader_sequence_two_keys(KC_G, KC_C)) {
@@ -273,6 +276,23 @@ bool leader_add_user() {
         SEND_STRING("site:reddit.com");
         return true;
     }
+    // bookmark macros
+    else if (leader_sequence_two_keys(KC_B, KC_A)) {
+        SEND_STRING("https://amazon.co.uk");
+        return true;
+    } else if (leader_sequence_two_keys(KC_B, KC_M)) {
+        SEND_STRING("https://mail.proton.me");
+        return true;
+    } else if (leader_sequence_two_keys(KC_B, KC_C)) {
+        SEND_STRING("https://calendar.proton.me");
+        return true;
+    } else if (leader_sequence_two_keys(KC_B, KC_G)) {
+        SEND_STRING("https://github.com");
+        return true;
+    } else if (leader_sequence_two_keys(KC_B, KC_N)) {
+        SEND_STRING("https://search.nixos.org/packages");
+        return true;
+    }
     // window macros
     else if (leader_sequence_two_keys(KC_W, KC_Q)) {
         switch (os_detection) {
@@ -302,15 +322,13 @@ void leader_end_user() {
     macro_page = BASE;
 }
 
-// TODO add braces for dynamic macros
-
 #    ifdef OLED_ENABLE
 static void oled_render_which_key(void) {
     switch (macro_page) {
         case BASE:
             oled_write_ln_P(PSTR("    --- Leader ---"), false);
             oled_write_ln_P(PSTR("(G)it (N)ix (S)earch"), false);
-            oled_write_ln_P(PSTR("(W)indow"), false);
+            oled_write_ln_P(PSTR("(W)indow (B)ookmark"), false);
             break;
         case GIT:
             oled_write_ln_P(PSTR("(C)ommit Cl(o)ne"), false);
@@ -326,6 +344,11 @@ static void oled_render_which_key(void) {
             break;
         case WINDOW:
             oled_write_ln_P(PSTR("(Q)uit"), false);
+            break;
+        case BOOKMARK:
+            oled_write_ln_P(PSTR("(A)mazon (M)ail"), false);
+            oled_write_ln_P(PSTR("(C)alendar (G)ithub"), false);
+            oled_write_ln_P(PSTR("(N)ixpkgs"), false);
             break;
     }
 }
