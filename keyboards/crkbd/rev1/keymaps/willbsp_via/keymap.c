@@ -27,11 +27,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LAYER_SYMBOL 5
 #define LAYER_FUNCTION 6
 #define LAYER_GAME 7
+#define LAYER_GAME_NUMBER 8
+#define LAYER_GAME_FUNCTION 9
 
-enum custom_keycodes {
-    // os keycodes, e.g. cmd / ctrl + c
-    OS_SEARCH = SAFE_RANGE,
-};
+enum custom_keycodes { KC_OS_SEARCH = SAFE_RANGE, KC_OS_WINDOW_TAB };
 
 enum which_key_page {
     BASE,
@@ -46,69 +45,6 @@ os_variant_t        os_detection    = OS_UNSURE;
 enum which_key_page macro_page      = BASE;
 uint8_t             macro_recording = 0;
 
-void td_select_all_copy_on_double_tap(tap_dance_state_t *state, void *user_data) {
-    bool use_cmd = os_detection == OS_MACOS || os_detection == OS_IOS;
-    if (state->count == 1) {
-        if (use_cmd) {
-            SEND_STRING(SS_LCMD("c"));
-        } else {
-            SEND_STRING(SS_LCTL("c"));
-        }
-    } else if (state->count == 2) {
-        if (use_cmd) {
-            SEND_STRING(SS_LCMD("ac"));
-        } else {
-            SEND_STRING(SS_LCTL("ac"));
-        }
-    }
-    reset_tap_dance(state);
-}
-
-void td_select_all_paste_on_double_tap(tap_dance_state_t *state, void *user_data) {
-    bool use_cmd = os_detection == OS_MACOS || os_detection == OS_IOS;
-    if (state->count == 1) {
-        if (use_cmd) {
-            SEND_STRING(SS_LCMD("v"));
-        } else {
-            SEND_STRING(SS_LCTL("v"));
-        }
-    } else if (state->count == 2) {
-        if (use_cmd) {
-            SEND_STRING(SS_LCMD("av"));
-        } else {
-            SEND_STRING(SS_LCTL("av"));
-        }
-    }
-    reset_tap_dance(state);
-}
-
-void td_dynamic_macro(tap_dance_state_t *state, void *user_data) {
-    keyrecord_t kr;
-    if (state->count == 1) {
-        kr.event.pressed = false;
-        process_dynamic_macro(QK_DYNAMIC_MACRO_PLAY_1, &kr);
-    } else if (state->count == 2) {
-        kr.event.pressed = true;
-        process_dynamic_macro(QK_DYNAMIC_MACRO_RECORD_STOP, &kr);
-    } else if (state->count == 3) {
-        kr.event.pressed = false;
-        process_dynamic_macro(QK_DYNAMIC_MACRO_RECORD_START_1, &kr);
-    }
-    reset_tap_dance(state);
-}
-
-enum tap_dance_keys {
-    TD_OS_COPY,
-    TD_OS_PASTE,
-    TD_DYN_MACRO,
-};
-
-tap_dance_action_t tap_dance_actions[] = {
-    [TD_OS_COPY]   = ACTION_TAP_DANCE_FN(td_select_all_copy_on_double_tap),
-    [TD_OS_PASTE]  = ACTION_TAP_DANCE_FN(td_select_all_paste_on_double_tap),
-    [TD_DYN_MACRO] = ACTION_TAP_DANCE_FN(td_dynamic_macro),
-};
-
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case QK_TAP_DANCE ... QK_TAP_DANCE_MAX:
@@ -121,9 +57,9 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[LAYER_BASE] = LAYOUT_split_3x6_3(
-        TD(TD_OS_COPY), KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TD(TD_DYN_MACRO),
-        QK_LEAD, MT(MOD_LALT,KC_A), MT(MOD_LGUI,KC_S), MT(MOD_LCTL,KC_D), MT(MOD_LSFT,KC_F), KC_G, KC_H, MT(MOD_LSFT | MOD_RSFT,KC_J), MT(MOD_LCTL | MOD_RCTL,KC_K), MT(MOD_LGUI,KC_L), MT(MOD_LALT | MOD_RALT,KC_SCLN), OS_SEARCH,
-        TD(TD_OS_PASTE), KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, TG(7),
+        KC_NO, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TG(7),
+        QK_LEAD, MT(MOD_LALT,KC_A), MT(MOD_LGUI,KC_S), MT(MOD_LCTL,KC_D), MT(MOD_LSFT,KC_F), KC_G, KC_H, MT(MOD_LSFT | MOD_RSFT,KC_J), MT(MOD_LCTL | MOD_RCTL,KC_K), MT(MOD_LGUI,KC_L), MT(MOD_LALT | MOD_RALT,KC_SCLN), KC_OS_SEARCH,
+        KC_NO, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_OS_WINDOW_TAB,
         LT(3,KC_ESC), LT(1,KC_SPC), LT(2,KC_TAB), LT(5,KC_ENT), LT(4,KC_BSPC), LT(6,KC_DEL)
     ),
 	[LAYER_NAVIGATION] = LAYOUT_split_3x6_3(
@@ -155,32 +91,40 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         S(KC_9), S(KC_0), S(KC_MINS), KC_ENT, KC_BSPC, KC_DEL
     ),
 	[LAYER_FUNCTION] = LAYOUT_split_3x6_3(
-        KC_NO, KC_F12, KC_F7, KC_F8, KC_F9, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-        KC_NO, KC_F11, KC_F4, KC_F5, KC_F6, KC_NO, KC_NO, KC_RSFT, KC_RCTL, KC_RGUI, KC_RALT, KC_NO,
-        KC_NO, KC_F10, KC_F1, KC_F2, KC_F3, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-        KC_NO, KC_F10, KC_NO, KC_NO, KC_NO, KC_NO
+        KC_NO, KC_NO, KC_F7, KC_F8, KC_F9, KC_F10, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
+        KC_NO, KC_NO, KC_F4, KC_F5, KC_F6, KC_F11, KC_NO, KC_RSFT, KC_RCTL, KC_RGUI, KC_RALT, KC_NO,
+        KC_NO, KC_NO, KC_F1, KC_F2, KC_F3, KC_F12, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
+        KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO
     ),
 	[LAYER_GAME] = LAYOUT_split_3x6_3(
         KC_ESC, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TG(7),
-        KC_LSFT, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT,
-        KC_LCTL, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_RSFT,
+        KC_LSFT, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, OSL(8),
+        KC_LCTL, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, OSL(9),
         KC_LALT, KC_SPC, KC_TAB, KC_ENT, KC_BSPC, KC_DEL
+    ),
+	[LAYER_GAME_NUMBER] = LAYOUT_split_3x6_3(
+        KC_ESC, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_NO, KC_7, KC_8, KC_9, KC_NO, KC_NO,
+        KC_LSFT, KC_A, KC_S, KC_D, KC_F, KC_G, KC_NO, KC_4, KC_5, KC_6, KC_NO, KC_NO,
+        KC_LCTL, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_NO, KC_1, KC_2, KC_3, KC_NO, KC_NO,
+        KC_LALT, KC_SPC, KC_TAB, KC_NO, KC_0, KC_NO
+    ),
+	[LAYER_GAME_FUNCTION] = LAYOUT_split_3x6_3(
+        KC_ESC, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_NO, KC_F7, KC_F8, KC_F9, KC_F10, KC_NO,
+        KC_LSFT, KC_A, KC_S, KC_D, KC_F, KC_G, KC_NO, KC_F4, KC_F5, KC_F6, KC_F11, KC_NO,
+        KC_LCTL, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_NO, KC_F1, KC_F2, KC_F3, KC_F12, KC_NO,
+        KC_LALT, KC_SPC, KC_TAB, KC_NO, KC_NO, KC_NO
     ),
 };
 // clang-format on
 
-// TODO enable tap dance so 2x user_copy will select all (ctrl/cmd + a) then copy
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-        case OS_SEARCH:
+        case KC_OS_SEARCH:
             if (record->event.pressed) {
                 switch (os_detection) {
                     case OS_MACOS:
                     case OS_IOS:
                         SEND_STRING(SS_LCMD(" "));
-                        break;
-                    case OS_WINDOWS:
-                        SEND_STRING(SS_LGUI());
                         break;
                     case OS_LINUX:
                         SEND_STRING(SS_LGUI("d"));
@@ -190,30 +134,24 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         break;
                 }
             }
-            break;
+            return true;
+        case KC_OS_WINDOW_TAB:
+            if (record->event.pressed) {
+                switch (os_detection) {
+                    case OS_MACOS:
+                    case OS_IOS:
+                        SEND_STRING(SS_LGUI(SS_TAP(X_TAB)));
+                        break;
+                    default:
+                        SEND_STRING(SS_LALT(SS_TAP(X_TAB)));
+                        break;
+                }
+            }
+            return true;
+        default:
+            return true;
     }
-    return true;
 };
-
-#ifdef DYNAMIC_MACRO_ENABLE
-bool dynamic_macro_record_start_user(int8_t direction) {
-    macro_recording = direction;
-    return true;
-}
-bool dynamic_macro_record_end_user(int8_t direction) {
-    macro_recording = 0;
-    return true;
-}
-#    ifdef OLED_ENABLE
-static void oled_render_dynamic_macro(void) {
-    if (macro_recording == 1) {
-        oled_write_ln_P(PSTR("Recording 1"), false);
-    } else if (macro_recording == 2) {
-        oled_write_ln_P(PSTR("Recording 2"), false);
-    }
-}
-#    endif // OLED_ENABLE
-#endif     // DYNAMIC_MACRO_ENABLE
 
 #ifdef LEADER_ENABLE
 bool leader_add_user(uint16_t keycode) {
@@ -403,6 +341,12 @@ static void oled_render_layer_state(void) {
         case LAYER_GAME:
             oled_write_ln_P(PSTR("Game"), false);
             break;
+        case LAYER_GAME_NUMBER:
+            oled_write_ln_P(PSTR("Game (Number)"), false);
+            break;
+        case LAYER_GAME_FUNCTION:
+            oled_write_ln_P(PSTR("Game (Fn)"), false);
+            break;
         default:
             oled_write_ln_P(PSTR("Undef"), false);
             break;
@@ -442,9 +386,6 @@ bool oled_task_user(void) {
             oled_render_layer_state();
 #    ifdef OS_DETECTION_ENABLE
             oled_render_detected_os(os_detection);
-#    endif
-#    ifdef DYNAMIC_MACRO_ENABLE
-            oled_render_dynamic_macro();
 #    endif
             oled_render_caps_state();
 #    ifdef LEADER_ENABLE

@@ -26,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #    define RGB_MATRIX_KEYPRESSES // reacts to keypresses
 #    define RGB_MATRIX_SLEEP      // turn off effects when suspended
 #    define RGB_MATRIX_FRAMEBUFFER_EFFECTS
-#    define RGB_MATRIX_MAXIMUM_BRIGHTNESS 150
 #    define RGB_MATRIX_HUE_STEP 8
 #    define RGB_MATRIX_SAT_STEP 8
 #    define RGB_MATRIX_VAL_STEP 8
@@ -89,10 +88,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #    define OLED_TIMEOUT 120000
 #endif
 
-#define TAPPING_TERM 125
-#define TAPPING_TERM_PER_KEY
-
 #define LEADER_PER_KEY_TIMING
 #define LEADER_TIMEOUT 2000
+
+#define TAPPING_TERM 125
+#define TAPPING_TERM_PER_KEY
 
 #define SPLIT_OLED_ENABLE
