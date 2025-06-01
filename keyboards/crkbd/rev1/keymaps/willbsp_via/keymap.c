@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LAYER_GAME_NUMBER 8
 #define LAYER_GAME_FUNCTION 9
 
-enum custom_keycodes { KC_OS_SEARCH = SAFE_RANGE, KC_OS_WINDOW_TAB };
+enum custom_keycodes { KC_OS_SEARCH = SAFE_RANGE, KC_OS_WINDOW_TAB, KC_OS_NEXT_WS, KC_OS_PREV_WS };
 
 enum which_key_page {
     BASE,
@@ -57,9 +57,9 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[LAYER_BASE] = LAYOUT_split_3x6_3(
-        KC_NO, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TG(7),
+        KC_OS_NEXT_WS, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, TG(7),
         QK_LEAD, MT(MOD_LALT,KC_A), MT(MOD_LGUI,KC_S), MT(MOD_LCTL,KC_D), MT(MOD_LSFT,KC_F), KC_G, KC_H, MT(MOD_LSFT | MOD_RSFT,KC_J), MT(MOD_LCTL | MOD_RCTL,KC_K), MT(MOD_LGUI,KC_L), MT(MOD_LALT | MOD_RALT,KC_SCLN), KC_OS_SEARCH,
-        KC_NO, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_OS_WINDOW_TAB,
+        KC_OS_PREV_WS, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_OS_WINDOW_TAB,
         LT(3,KC_ESC), LT(1,KC_SPC), LT(2,KC_TAB), LT(5,KC_ENT), LT(4,KC_BSPC), LT(6,KC_DEL)
     ),
 	[LAYER_NAVIGATION] = LAYOUT_split_3x6_3(
@@ -131,6 +131,36 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         break;
                     default:
                         SEND_STRING(SS_LGUI());
+                        break;
+                }
+            }
+            return true;
+        case KC_OS_NEXT_WS:
+            if (record->event.pressed) {
+                switch (os_detection) {
+                    case OS_IOS:
+                    case OS_MACOS:
+                        SEND_STRING(SS_LCTL(SS_TAP(X_RIGHT)));
+                        break;
+                    case OS_WINDOWS:
+                        SEND_STRING(SS_LCTL(SS_LGUI(SS_TAP(X_RIGHT))));
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return true;
+        case KC_OS_PREV_WS:
+            if (record->event.pressed) {
+                switch (os_detection) {
+                    case OS_IOS:
+                    case OS_MACOS:
+                        SEND_STRING(SS_LCTL(SS_TAP(X_LEFT)));
+                        break;
+                    case OS_WINDOWS:
+                        SEND_STRING(SS_LCTL(SS_LGUI(SS_TAP(X_LEFT))));
+                        break;
+                    default:
                         break;
                 }
             }

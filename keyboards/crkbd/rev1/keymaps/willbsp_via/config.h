@@ -95,3 +95,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define TAPPING_TERM_PER_KEY
 
 #define SPLIT_OLED_ENABLE
+
+#define OS_DETECTION_KEYBOARD_RESET
+#define OS_DETECTION_SINGLE_REPORT
